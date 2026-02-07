@@ -165,3 +165,14 @@ module "monitoring" {
 
   tags = local.common_tags
 }
+
+# Frontend Hosting Module (Optional)
+module "frontend" {
+  count  = var.enable_frontend_hosting ? 1 : 0
+  source = "./modules/frontend"
+
+  name_prefix = local.name_prefix
+  environment = var.environment
+
+  tags = local.common_tags
+}

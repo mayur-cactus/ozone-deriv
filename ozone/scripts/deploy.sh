@@ -39,10 +39,10 @@ fi
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 INFRA_DIR="$SCRIPT_DIR/../infra"
-ENV_DIR="$INFRA_DIR/environments/$ENVIRONMENT"
 
-if [ ! -d "$ENV_DIR" ]; then
-    echo "Error: Environment directory not found: $ENV_DIR"
+# Check if infra directory exists
+if [ ! -d "$INFRA_DIR" ]; then
+    echo "Error: Infrastructure directory not found: $INFRA_DIR"
     exit 1
 fi
 

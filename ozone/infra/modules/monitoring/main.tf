@@ -11,8 +11,8 @@ resource "aws_kinesis_firehose_delivery_stream" "logs" {
     prefix     = "ai-waf-logs/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/"
     error_output_prefix = "errors/!{firehose:error-output-type}/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/"
 
-    buffer_size     = 5
-    buffer_interval = 300
+    buffering_size     = 5
+    buffering_interval = 300
 
     compression_format = "GZIP"
 

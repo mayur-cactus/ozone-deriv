@@ -59,7 +59,7 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Main Lambda handler for AI WAF
     """
-    request_id = context.request_id
+    request_id = context.aws_request_id
     start_time = time.time()
     
     try:
@@ -76,6 +76,11 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         # Health check endpoint
         if event.get('rawPath') == '/health':
             return create_response(200, {"status": "healthy", "version": "1.0"})
+        
+        # Direct endpoint (bypasses all WAF security layers for demo purposes)
+        if event.get('rawPath') == '/chat-direct':
+            logger.warning(f"UNPROTECTED request {request_id} - bypassing all security layers")
+            return handle_direct_request(prompt, user_id, request_id, start_time)
         
         # Validate input
         if not prompt:
@@ -439,6 +444,62 @@ def log_security_event(request_id: str, user_id: str, prompt: str, details: Dict
             )
     except Exception as e:
         logger.error(f"Error logging to Kinesis: {str(e)}")
+
+
+def handle_direct_request(prompt: str, user_id: str, request_id: str, start_time: float) -> Dict[str, Any]:
+    """
+    Handle request WITHOUT any WAF security layers
+    This endpoint is for demo purposes only to show the difference
+    WARNING: This bypasses all security checks
+    """
+    try:
+        # Call LLM directly without guardrails
+        response = bedrock_runtime.invoke_model(
+            modelId=BEDROCK_MODEL_ID,
+            contentType="application/json",
+            accept="application/json",
+            body=json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 2000,
+                "temperature": 0.7,
+                "messages": [{
+                    "role": "user",
+                    "content": prompt
+                }]
+            })
+        )
+        
+        response_body = json.loads(response['body'].read())
+        content = response_body['content'][0]['text']
+        
+        duration_ms = (time.time() - start_time) * 1000
+        
+        logger.warning(f"UNPROTECTED response generated for request {request_id}")
+        
+        return create_response(200, {
+            "response": content,
+            "request_id": request_id,
+            "processing_time_ms": duration_ms,
+            "warning": "This response was generated WITHOUT security checks",
+            "metadata": {
+                "guardrails_passed": False,
+                "output_verified": False,
+                "security_layers_bypassed": [
+                    "Pre-LLM Classifier",
+                    "Bedrock Guardrails",
+                    "Output Verification",
+                    "Tool Safety Check"
+                ]
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in direct request: {str(e)}", exc_info=True)
+        return create_response(500, {
+            "error": "Failed to process unprotected request",
+            "code": "INTERNAL_ERROR",
+            "request_id": request_id
+        })
 
 
 def publish_metric(metric_name: str, value: float):

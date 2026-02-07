@@ -80,3 +80,19 @@ output "test_commands" {
     EOT
   }
 }
+
+# Frontend Hosting Outputs
+output "frontend_bucket_name" {
+  description = "S3 bucket name for frontend hosting"
+  value       = var.enable_frontend_hosting ? module.frontend[0].bucket_name : null
+}
+
+output "frontend_url" {
+  description = "Frontend demo URL (CloudFront)"
+  value       = var.enable_frontend_hosting ? module.frontend[0].cloudfront_url : null
+}
+
+output "frontend_cloudfront_id" {
+  description = "CloudFront distribution ID for frontend"
+  value       = var.enable_frontend_hosting ? module.frontend[0].cloudfront_id : null
+}

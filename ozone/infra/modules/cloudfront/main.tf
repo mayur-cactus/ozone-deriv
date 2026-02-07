@@ -79,12 +79,7 @@ resource "aws_cloudfront_distribution" "main" {
     minimum_protocol_version       = "TLSv1.2_2021"
   }
 
-  dynamic "aliases" {
-    for_each = var.custom_domain != null ? [var.custom_domain] : []
-    content {
-      aliases = [aliases.value]
-    }
-  }
+  aliases = var.custom_domain != null ? [var.custom_domain] : []
 
   logging_config {
     include_cookies = false

@@ -77,7 +77,7 @@ resource "aws_bedrock_guardrail" "main" {
       }
       pii_entities_config {
         action = "BLOCK"
-        type   = "SSN"
+        type   = "US_SOCIAL_SECURITY_NUMBER"
       }
       pii_entities_config {
         action = "BLOCK"

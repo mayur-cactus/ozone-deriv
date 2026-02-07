@@ -25,10 +25,25 @@ resource "aws_apigatewayv2_integration" "lambda" {
   timeout_milliseconds   = 30000
 }
 
+# Lambda Permission for API Gateway
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = var.lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
 # Routes
 resource "aws_apigatewayv2_route" "chat" {
   api_id    = aws_apigatewayv2_api.main.id
   route_key = "POST /chat"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
+}
+
+resource "aws_apigatewayv2_route" "chat_direct" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "POST /chat-direct"
   target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
 }
 

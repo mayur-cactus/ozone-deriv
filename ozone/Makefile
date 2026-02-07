@@ -38,6 +38,11 @@ check-terraform: ## Check Terraform installation
 check-prereqs: check-aws check-terraform ## Check all prerequisites
 	@echo "$(COLOR_GREEN)✓ All prerequisites met$(COLOR_RESET)"
 
+setup: ## Run initial setup (creates terraform.tfvars, checks prerequisites)
+	@echo "$(COLOR_BLUE)Running initial setup...$(COLOR_RESET)"
+	chmod +x scripts/setup.sh
+	./scripts/setup.sh
+
 init: check-prereqs ## Initialize Terraform
 	@echo "$(COLOR_BLUE)Initializing Terraform...$(COLOR_RESET)"
 	cd infra && terraform init -upgrade
@@ -87,6 +92,25 @@ test-health: ## Test API health endpoint
 	@echo "$(COLOR_BLUE)Testing health endpoint...$(COLOR_RESET)"
 	@API_ENDPOINT=$$(cd infra && terraform output -raw api_endpoint 2>/dev/null) && \
 	curl -s "$$API_ENDPOINT/health" | jq '.'
+
+demo: ## Deploy interactive chatbot demo
+	@echo "$(COLOR_BLUE)Deploying demo chatbot...$(COLOR_RESET)"
+	chmod +x scripts/deploy-demo.sh
+	./scripts/deploy-demo.sh
+
+demo-local: ## Run demo chatbot locally
+	@echo "$(COLOR_BLUE)Starting local demo server...$(COLOR_RESET)"
+	@echo "$(COLOR_YELLOW)Make sure config.json is configured with your API endpoint$(COLOR_RESET)"
+	@echo ""
+	@echo "Opening browser at http://localhost:8080"
+	@cd src/frontend && python3 -m http.server 8080
+
+configure-frontend: ## Configure frontend API endpoint
+	@echo "$(COLOR_BLUE)Configuring frontend...$(COLOR_RESET)"
+	chmod +x scripts/configure-frontend.sh
+	./scripts/configure-frontend.sh
+
+deploy-frontend: demo ## Deploy frontend to S3 + CloudFront (alias for demo)
 
 logs: ## Tail Lambda logs
 	@echo "$(COLOR_BLUE)Tailing Lambda logs...$(COLOR_RESET)"

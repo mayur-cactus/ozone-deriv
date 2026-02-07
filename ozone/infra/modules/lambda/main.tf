@@ -75,12 +75,11 @@ resource "aws_iam_role_policy" "lambda" {
         Effect = "Allow"
         Action = [
           "bedrock:InvokeModel",
-          "bedrock:InvokeModelWithResponseStream"
+          "bedrock:InvokeModelWithResponseStream",
+          "bedrock:ListFoundationModels",
+          "bedrock:GetFoundationModel"
         ]
-        Resource = [
-          "arn:aws:bedrock:*::foundation-model/${var.bedrock_model_id}",
-          "arn:aws:bedrock:*:*:inference-profile/*"
-        ]
+        Resource = "*"
       },
       {
         Effect = "Allow"
@@ -88,6 +87,14 @@ resource "aws_iam_role_policy" "lambda" {
           "bedrock:ApplyGuardrail"
         ]
         Resource = "arn:aws:bedrock:*:*:guardrail/*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "aws-marketplace:ViewSubscriptions",
+          "aws-marketplace:Subscribe"
+        ]
+        Resource = "*"
       },
       {
         Effect = "Allow"
@@ -123,18 +130,44 @@ resource "aws_cloudwatch_log_group" "lambda" {
   tags = var.tags
 }
 
+# Build Lambda deployment package
+resource "null_resource" "build_lambda" {
+  triggers = {
+    # Rebuild if main.py or requirements.txt changes
+    main_py_hash         = filemd5("${path.module}/../../../src/lambda/ai-waf-gateway/main.py")
+    requirements_hash    = filemd5("${path.module}/../../../src/lambda/ai-waf-gateway/requirements.txt")
+    build_script_hash    = filemd5("${path.module}/../../../src/lambda/ai-waf-gateway/build.sh")
+  }
+
+  provisioner "local-exec" {
+    command     = "chmod +x build.sh && ./build.sh"
+    working_dir = "${path.module}/../../../src/lambda/ai-waf-gateway"
+  }
+}
+
+# Data source to get the deployment zip hash after build
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/../../../src/lambda/ai-waf-gateway"
+  output_path = "${path.module}/../../../src/lambda/ai-waf-gateway/deployment-tf.zip"
+  excludes    = ["deployment.zip", "build", "__pycache__", "*.pyc", ".DS_Store"]
+  
+  depends_on = [null_resource.build_lambda]
+}
+
 # Lambda Function
 resource "aws_lambda_function" "ai_waf" {
-  filename         = "${path.module}/../../lambda-placeholder.zip"
+  
   function_name    = "${var.name_prefix}-ai-waf"
   role             = aws_iam_role.lambda.arn
   handler          = "main.lambda_handler"
-  source_code_hash = filebase64sha256("${path.module}/../../lambda-placeholder.zip")
   runtime          = var.lambda_runtime
   architectures    = [var.lambda_architecture]
   memory_size      = var.lambda_memory_size
   timeout          = var.lambda_timeout
 
+  filename         = data.archive_file.lambda_zip.output_path
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   vpc_config {
     subnet_ids         = var.private_subnet_ids
     security_group_ids = [aws_security_group.lambda.id]
@@ -159,17 +192,9 @@ resource "aws_lambda_function" "ai_waf" {
 
   depends_on = [
     aws_cloudwatch_log_group.lambda,
-    aws_iam_role_policy.lambda
+    aws_iam_role_policy.lambda,
+    data.archive_file.lambda_zip
   ]
-}
-
-# Lambda Permission for API Gateway
-resource "aws_lambda_permission" "api_gateway" {
-  statement_id  = "AllowAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.ai_waf.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${var.api_gateway_execution_arn}/*"
 }
 
 # CloudWatch Alarms
@@ -209,18 +234,4 @@ resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
   }
 
   tags = var.tags
-}
-
-# Create placeholder zip file if it doesn't exist
-resource "null_resource" "create_placeholder_zip" {
-  provisioner "local-exec" {
-    command = <<-EOT
-      if [ ! -f "${path.module}/../../lambda-placeholder.zip" ]; then
-        mkdir -p ${path.module}/../../tmp
-        echo 'def lambda_handler(event, context): return {"statusCode": 200, "body": "Placeholder"}' > ${path.module}/../../tmp/main.py
-        cd ${path.module}/../../tmp && zip ../lambda-placeholder.zip main.py
-        rm -rf ${path.module}/../../tmp
-      fi
-    EOT
-  }
 }

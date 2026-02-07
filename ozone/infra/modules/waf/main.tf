@@ -352,20 +352,22 @@ resource "aws_cloudwatch_log_group" "waf_logs" {
   tags = var.tags
 }
 
-# WAF Logging Configuration
-resource "aws_wafv2_web_acl_logging_configuration" "regional" {
-  resource_arn            = aws_wafv2_web_acl.regional.arn
-  log_destination_configs = [aws_cloudwatch_log_group.waf_logs.arn]
+# Note: WAF logging configuration requires Kinesis Firehose
+# Commented out to avoid error - enable if Kinesis Firehose is set up
+# resource "aws_wafv2_web_acl_logging_configuration" "regional" {
+#   resource_arn            = aws_wafv2_web_acl.regional.arn
+#   log_destination_configs = [aws_kinesis_firehose_delivery_stream.waf_logs.arn]
+# 
+#   redacted_fields {
+#     single_header {
+#       name = "authorization"
+#     }
+#   }
+# 
+#   redacted_fields {
+#     single_header {
+#       name = "cookie"
+#     }
+#   }
+# }
 
-  redacted_fields {
-    single_header {
-      name = "authorization"
-    }
-  }
-
-  redacted_fields {
-    single_header {
-      name = "cookie"
-    }
-  }
-}

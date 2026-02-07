@@ -201,3 +201,9 @@ variable "enable_anomaly_detection" {
   type        = bool
   default     = true
 }
+
+variable "enable_frontend_hosting" {
+  description = "Enable S3 + CloudFront hosting for frontend demo"
+  type        = bool
+  default     = true
+}
