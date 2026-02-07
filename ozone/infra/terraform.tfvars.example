@@ -1,0 +1,49 @@
+# Example terraform.tfvars
+# Copy this file to terraform.tfvars and customize for your environment
+
+# Project Configuration
+project_name = "ai-waf"
+environment  = "dev"
+aws_region   = "us-east-1"
+cost_center  = "engineering"
+
+# VPC Configuration
+vpc_cidr           = "10.0.0.0/16"
+availability_zones = ["us-east-1a", "us-east-1b"]
+enable_nat_gateway = true
+
+# WAF Configuration
+waf_rate_limit   = 2000  # requests per 5 minutes
+max_request_size = 128   # KB
+
+# Lambda Configuration
+lambda_runtime      = "python3.11"
+lambda_architecture = "arm64"
+lambda_memory_size  = 1024
+lambda_timeout      = 30
+log_level           = "INFO"
+
+# Bedrock Configuration
+bedrock_model_id                 = "anthropic.claude-3-haiku-20240307-v1:0"
+prompt_attack_filter_strength    = "HIGH"
+toxicity_threshold               = 0.5
+enable_pii_filter                = true
+guardrail_blocked_message        = "I apologize, but I cannot process this request as it violates our security policies."
+risk_threshold                   = 70
+
+# API Gateway Configuration
+api_throttle_burst_limit = 500
+api_throttle_rate_limit  = 100
+cors_allow_origins       = ["*"]
+
+# CloudFront Configuration (Optional)
+enable_cloudfront   = true
+ssl_certificate_arn = null  # Set this if using custom domain
+custom_domain       = null  # e.g., "api.example.com"
+
+# Monitoring Configuration
+enable_opensearch         = false  # Set to true for production
+opensearch_instance_type  = "t3.small.search"
+opensearch_instance_count = 1
+alarm_email               = ""  # Set your email for alarms
+enable_anomaly_detection  = true
