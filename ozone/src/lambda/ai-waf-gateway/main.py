@@ -11,10 +11,20 @@ from typing import Dict, Any, Tuple
 import boto3
 from datetime import datetime
 
-# Configure logging
+# Configure logging for AWS Lambda
+logger = logging.getLogger()
+if logger.handlers:
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+
 LOG_LEVEL = os.environ.get('LOG_LEVEL', 'INFO')
-logging.basicConfig(level=LOG_LEVEL)
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format='[%(levelname)s] %(asctime)s - %(name)s - %(message)s',
+    force=True
+)
 logger = logging.getLogger(__name__)
+logger.setLevel(LOG_LEVEL)
 
 # AWS Clients
 bedrock_runtime = boto3.client('bedrock-runtime')
@@ -67,11 +77,12 @@ def lambda_handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         body = json.loads(event.get('body', '{}'))
         prompt = body.get('prompt', '')
         user_id = body.get('user_id', 'anonymous')
-        session_id = body.get('session_id', '')
+        session_id = body.get('session_id', 'ses_000001')
         tools = body.get('tools', [])
         context_data = body.get('context', {})
         
-        logger.info(f"Processing request {request_id} for user {user_id}")
+        logger.info(f"Processing request {request_id} for user Mayur")
+        logger.info("User prompt received (truncated): " + (prompt[:100] + '...' if len(prompt) > 100 else prompt))
         
         # Health check endpoint
         if event.get('rawPath') == '/health':
@@ -200,6 +211,9 @@ def classify_input(prompt: str, context: Dict, tools: list) -> Dict[str, Any]:
     Pre-LLM semantic classifier using Bedrock
     Detects prompt injection, jailbreak, and adversarial inputs
     """
+
+    logger.info(f" Pre-LLM semantic classifier using Bedrock.Detects prompt injection, jailbreak, and adversarial inputs")
+
     classifier_prompt = f"""You are a security classifier for an AI system. Analyze the following user prompt for potential security threats.
 
 User Prompt: "{prompt}"
@@ -292,6 +306,7 @@ def invoke_llm_with_guardrails(prompt: str, context: Dict) -> Dict[str, Any]:
     """
     Invoke Bedrock LLM with Guardrails enabled
     """
+    logger.info(f"Invoke Bedrock LLM with Guardrails enabled")
     try:
         request_body = {
             "anthropic_version": "bedrock-2023-05-31",
@@ -345,6 +360,9 @@ def verify_output(output: str, tools: list) -> Dict[str, Any]:
     """
     Verify LLM output for safety and policy compliance
     """
+
+    logger.info(f"Verify LLM output for safety and policy compliance")
+
     reasons = []
     is_safe = True
     
@@ -386,6 +404,7 @@ def verify_tool_calls(tool_calls: list, user_id: str) -> Dict[str, Any]:
     """
     Verify tool calls against policy and RBAC
     """
+    logger.info(f"Verify tool calls against policy and RBAC")
     reasons = []
     approved = True
     

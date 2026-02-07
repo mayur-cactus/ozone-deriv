@@ -114,6 +114,14 @@ resource "aws_iam_role_policy" "lambda" {
       {
         Effect = "Allow"
         Action = [
+          "firehose:PutRecord",
+          "firehose:PutRecordBatch"
+        ]
+        Resource = "*",
+      },
+      {
+        Effect = "Allow"
+        Action = [
           "cloudwatch:PutMetricData"
         ]
         Resource = "*"
